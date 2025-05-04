@@ -1,19 +1,18 @@
-USE salesDB;-- Ensure the salesDB database is used (create if it doesn't exist)
+use SalesDB;
 
--- Question 1: Transforming ProductDetail table into 1NF
+-- ---------------------------------------------
+-- 📌 Question 1: Transform to First Normal Form (1NF)
+-- ---------------------------------------------
+-- Original issue: 'Products' column contains multiple values (not atomic)
 
--- Drop the table if it already exists to avoid Error 1050
-DROP TABLE IF EXISTS ProductDetail_1NF;
-
--- Create a new table ProductDetail_1NF to store data in 1NF
+-- Step 1: Create a normalized version of the ProductDetail table
 CREATE TABLE ProductDetail_1NF (
     OrderID INT,
     CustomerName VARCHAR(100),
-    Product VARCHAR(100),
-    PRIMARY KEY (OrderID, Product) -- Composite key to ensure uniqueness
+    Product VARCHAR(100)
 );
 
--- Insert data from ProductDetail, splitting the Products column
+-- Step 2: Insert each product as a separate row (1NF format)
 INSERT INTO ProductDetail_1NF (OrderID, CustomerName, Product)
 VALUES
 (101, 'John Doe', 'Laptop'),
@@ -23,43 +22,28 @@ VALUES
 (102, 'Jane Smith', 'Mouse'),
 (103, 'Emily Clark', 'Phone');
 
--- Optional: Select to verify the result
-SELECT * FROM ProductDetail_1NF;
+-- ✅ This table now follows 1NF: all columns contain atomic values.
 
--- Question 2: Transforming OrderDetails table into 2NF
+-- ---------------------------------------------
+-- 📌 Question 2: Transform to Second Normal Form (2NF)
+-- ---------------------------------------------
+-- Issue: CustomerName depends only on OrderID, which is part of the composite key (OrderID, Product)
 
--- Drop existing tables to avoid conflicts
-DROP TABLE IF EXISTS OrderDetails_2NF;
-DROP TABLE IF EXISTS Orders;
-DROP TABLE IF EXISTS OrderDetails;
-
--- Create the initial OrderDetails table (as given in the assignment)
-CREATE TABLE OrderDetails (
-    OrderID INT,
-    CustomerName VARCHAR(100),
-    Product VARCHAR(100),
-    Quantity INT,
-    PRIMARY KEY (OrderID, Product)
-);
-
--- Insert the provided data into OrderDetails
-INSERT INTO OrderDetails (OrderID, CustomerName, Product, Quantity)
-VALUES
-(101, 'John Doe', 'Laptop', 2),
-(101, 'John Doe', 'Mouse', 1),
-(102, 'Jane Smith', 'Tablet', 3),
-(102, 'Jane Smith', 'Keyboard', 1),
-(102, 'Jane Smith', 'Mouse', 2),
-(103, 'Emily Clark', 'Phone', 1);
-
--- Create Orders table to store OrderID and CustomerName
+-- Step 1: Create a separate 'Orders' table to store Customer info (OrderID ➝ CustomerName)
 CREATE TABLE Orders (
     OrderID INT PRIMARY KEY,
     CustomerName VARCHAR(100)
 );
 
--- Create OrderDetails_2NF table to store product details
-CREATE TABLE OrderDetails_2NF (
+-- Step 2: Populate 'Orders' table
+INSERT INTO Orders (OrderID, CustomerName)
+VALUES
+(101, 'John Doe'),
+(102, 'Jane Smith'),
+(103, 'Emily Clark');
+
+-- Step 3: Create 'Product' table with no partial dependencies
+CREATE TABLE Product (
     OrderID INT,
     Product VARCHAR(100),
     Quantity INT,
@@ -67,19 +51,14 @@ CREATE TABLE OrderDetails_2NF (
     FOREIGN KEY (OrderID) REFERENCES Orders(OrderID)
 );
 
--- Insert data into Orders table (unique OrderID and CustomerName)
-INSERT INTO Orders (OrderID, CustomerName)
-SELECT DISTINCT OrderID, CustomerName
-FROM OrderDetails;
+-- Step 4: Populate 'Product' table
+INSERT INTO Product (OrderID, Product, Quantity)
+VALUES
+(101, 'Laptop', 2),
+(101, 'Mouse', 1),
+(102, 'Tablet', 3),
+(102, 'Keyboard', 1),
+(102, 'Mouse', 2),
+(103, 'Phone', 1);
 
--- Insert data into OrderDetails_2NF table
-INSERT INTO OrderDetails_2NF (OrderID, Product, Quantity)
-SELECT OrderID, Product, Quantity
-FROM OrderDetails;
-
--- Optional: Select to verify the results
-SELECT * FROM Orders;
-SELECT * FROM OrderDetails_2NF;
-
--- Optional: Drop the original OrderDetails table if no longer needed
--- DROP TABLE OrderDetails;
+-- ✅ Now the design is in 2NF: all non-key attributes are fully dependent on the full primary key.
